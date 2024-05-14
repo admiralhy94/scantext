@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR IC Scanner - Scanner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/2.1.1/tesseract.min.js"></script>
+    <script src="https://docs.opencv.org/4.5.3/opencv.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        #video {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+        }
+        #canvas {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Scanner</h1>
+    <video id="video" width="640" height="480" autoplay></video>
+    <button id="capture">Capture Photo</button>
+    <canvas id="canvas" width="640" height="480"></canvas>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        const captureButton = document.getElementById('capture');
+
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: { exact: "environment" } // Use the back camera
+                    }
+                });
+                video.srcObject = stream;
+
+                const track = stream.getVideoTracks()[0];
+                const imageCapture = new ImageCapture(track);
+
+                const capabilities = await imageCapture.getPhotoCapabilities();
+                if (capabilities.focusMode.includes('manual')) {
+                    await imageCapture.setOptions({
+                        focusMode: 'continuous'
+                    });
+                }
+            } catch (err) {
+                console.error("Error accessing camera: ", err);
+            }
+        }
+
+        captureButton.addEventListener('click', () => {
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = canvas.toDataURL('image/png');
+            enhanceImage(imageData).then(enhancedImageData => {
+                Tesseract.recognize(enhancedImageData, 'eng', { logger: m => console.log(m) })
+                    .then(({ data: { text } }) => {
+                        localStorage.setItem('scannedText', text);
+                        localStorage.setItem('photo', enhancedImageData);
+                        window.location.href = 'data.html';
+                    })
+                    .catch(err => {
+                        console.error("OCR error: ", err);
+                    });
+            });
+        });
+
+        async function enhanceImage(imageData) {
+            return new Promise((resolve, reject) => {
+                let src = cv.imread(imageData);
+                let dst = new cv.Mat();
+                // Apply HDR effect
+                cv.detailEnhance(src, dst);
+                // Apply sharpening
+                let ksize = new cv.Size(3, 3);
+                cv.GaussianBlur(dst, dst, ksize, 0);
+                cv.addWeighted(src, 1.5, dst, -0.5, 0, dst);
+                cv.imshow('canvas', dst);
+                let enhancedImageData = canvas.toDataURL('image/png');
+                src.delete();
+                dst.delete();
+                resolve(enhancedImageData);
+            });
+        }
+
+        window.onload = initCamera;
+    </script>
+</body>
+</html>

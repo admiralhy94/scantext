@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR IC Scanner - Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        .result {
+            margin: 20px 0;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Scanned Data</h1>
+    <div id="data-display">
+        <p><strong>Detected Text:</strong></p>
+        <p id="scanned-text" class="result"></p>
+        <img id="ic-photo" alt="IC Photo" />
+    </div>
+
+    <script>
+        const scannedTextField = document.getElementById('scanned-text');
+        const icPhoto = document.getElementById('ic-photo');
+
+        window.onload = () => {
+            const scannedText = localStorage.getItem('scannedText');
+            const photo = localStorage.getItem('photo');
+
+            if (scannedText && photo) {
+                scannedTextField.textContent = scannedText;
+                icPhoto.src = photo;
+            } else {
+                document.getElementById('data-display').innerHTML = '<p>No data available. Please scan an IC card first.</p>';
+            }
+        }
+    </script>
+</body>
+</html>
